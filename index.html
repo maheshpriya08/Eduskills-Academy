@@ -21,7 +21,7 @@ input,select,textarea{width:100%;padding:10px 11px;border:1px solid #d8deea;bord
 .actions{display:flex;gap:5px;flex-wrap:wrap}.actions button{font-size:11px;padding:7px 9px}
 .notice{background:#fff8e8;border:1px solid #f0dfb8;border-radius:10px;padding:12px;color:#76571b;margin:12px 0}
 .toast{position:fixed;bottom:18px;right:18px;background:#18233a;color:#fff;padding:12px 16px;border-radius:10px;z-index:20;max-width:90vw}
-.receipt{max-width:620px;margin:20px auto;background:white;border:1px solid #ddd;padding:28px;color:#111}
+.message-preview{white-space:pre-wrap;min-width:260px;max-width:390px;line-height:1.4}\n.receipt{max-width:620px;margin:20px auto;background:white;border:1px solid #ddd;padding:28px;color:#111}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}header{padding:0 14px}.wrap{padding:0 12px}}
 @media print{header,.tabs,.no-print{display:none!important}body{background:white}.wrap{margin:0;padding:0}.receipt{border:1px solid #777;box-shadow:none}}
 </style>
@@ -45,7 +45,7 @@ input,select,textarea{width:100%;padding:10px 11px;border:1px solid #d8deea;bord
 <div class="stat"><span>Active enrolments</span><strong id="sStudents">0</strong></div><div class="stat"><span>Fees collected (all time)</span><strong id="sCollected">₹0</strong></div><div class="stat"><span>Fees due (current month)</span><strong id="sDue">₹0</strong></div><div class="stat"><span>Attendance entries (this month)</span><strong id="sAttendance">0</strong></div>
 </div>
 <div class="tabs no-print">
-<button class="active" data-tab="students">Admissions</button><button data-tab="fees">Record payment</button><button data-tab="payments">Payment Management</button><button data-tab="attendance">Attendance</button><button data-tab="reports">Reports</button><button data-tab="settings">Settings & backup</button>
+<button class="active" data-tab="students">Admissions</button><button data-tab="fees">Record payment</button><button data-tab="payments">Payment Management</button><button data-tab="reminders">Fee Reminders</button><button data-tab="attendance">Attendance</button><button data-tab="reports">Reports</button><button data-tab="settings">Settings & backup</button>
 </div>
 <section id="tab-students" class="panel">
 <div class="row"><h2>Student / programme enrolments</h2><button class="primary fit" id="newStudent">+ New admission</button></div>
@@ -64,6 +64,15 @@ input,select,textarea{width:100%;padding:10px 11px;border:1px solid #d8deea;bord
 <h2 style="margin-top:24px">Monthly fee balance</h2><div class="row"><input type="month" id="ledgerMonth"><button class="soft fit" id="loadLedger">Refresh balances</button></div>
 <div class="tablewrap"><table><thead><tr><th>Registration no.</th><th>Student</th><th>Programme</th><th>Monthly fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="ledgerRows"></tbody></table></div>
 </section>
+<section id="tab-reminders" class="panel hidden">
+<h2>Monthly fee reminders</h2>
+<p class="small muted">Review each message before opening WhatsApp. Messages are never sent automatically.</p>
+<div class="notice">Scheduled generation: 10th of every month at 7:00 PM IST. After sending a WhatsApp message, return here and mark it as Sent.</div>
+<div class="three"><div><label>Fee month</label><input type="month" id="reminderMonth"></div><div><label>Programme</label><select id="reminderProgram"><option value="All">All programmes</option><option>Tuition</option><option>Spoken English</option></select></div><div><label>Status</label><select id="reminderStatus"><option value="Pending">Pending approval</option><option value="Sent">Sent</option><option value="Dismissed">Dismissed</option><option value="All">All statuses</option></select></div></div>
+<div class="row" style="margin:12px 0"><button class="primary fit" id="generateReminders">Generate pending reminders</button><button class="soft fit" id="refreshReminders">Refresh</button></div>
+<div class="row"><div class="stat"><span>Pending reminders</span><strong id="reminderPendingCount">0</strong></div><div class="stat"><span>Outstanding balance</span><strong id="reminderPendingTotal">₹0</strong></div></div>
+<div class="tablewrap"><table><thead><tr><th>Student / registration</th><th>Programme</th><th>Parent / phone</th><th>Fee</th><th>Paid</th><th>Balance</th><th>Message</th><th>Actions</th></tr></thead><tbody id="reminderRows"></tbody></table></div>
+</section>
 <section id="tab-attendance" class="panel hidden"><h2>Daily attendance</h2><div class="row"><input type="date" id="attDate"><select id="attProgram"><option value="All">All programmes</option><option>Tuition</option><option>Spoken English</option></select><button class="soft fit" id="loadAttendance">Load register</button></div>
 <div class="tablewrap"><table><thead><tr><th>Registration no.</th><th>Student</th><th>Programme</th><th>Attendance</th></tr></thead><tbody id="attRows"></tbody></table></div><button class="primary" id="saveAttendance" style="margin-top:14px">Save attendance</button></section>
 <section id="tab-reports" class="panel hidden"><h2>Collection reports</h2><div class="three"><div><label>From month</label><input type="month" id="reportFrom"></div><div><label>To month</label><input type="month" id="reportTo"></div><div style="align-self:end"><button class="primary" id="makeReport">Generate report</button></div></div><div id="reportResult" class="notice">Choose a date range to generate a collection summary.</div>
@@ -74,7 +83,7 @@ input,select,textarea{width:100%;padding:10px 11px;border:1px solid #d8deea;bord
 </section></main><div id="toast" class="toast hidden"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-let sb=null,students=[],payments=[],attendance=[],editingId=null,currentUser=null;
+let sb=null,students=[],payments=[],attendance=[],reminders=[],editingId=null,currentUser=null;
 const $=id=>document.getElementById(id),today=new Date(),ym=()=>today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0'),dateISO=()=>today.toISOString().slice(0,10),money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
 function toast(m){$('toast').textContent=m;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),3500)}
 function cfg(){try{return JSON.parse(localStorage.getItem('eda_supabase')||'null')}catch{return null}}
@@ -88,13 +97,13 @@ $('saveConfig').onclick=()=>{let url=$('sbUrl').value.trim(),key=$('sbKey').valu
 $('changeConfig').onclick=()=>{localStorage.removeItem('eda_supabase');show('setup')};
 $('loginBtn').onclick=async()=>{let {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){toast(error.message);return}await init()};
 $('logoutBtn').onclick=async()=>{await sb.auth.signOut();currentUser=null;$('logoutBtn').classList.add('hidden');show('login')};
-async function loadAll(){try{let [a,b,c]=await Promise.all([sb.from('students').select('*').order('admission_no'),sb.from('payments').select('*,students(admission_no,full_name,program_type)').order('payment_date',{ascending:false}),sb.from('attendance').select('*').gte('attendance_date',ym()+'-01')]);for(let x of [a,b,c])if(x.error)throw x.error;students=a.data||[];payments=b.data||[];attendance=c.data||[];render();renderPayments();$('loadLedger').click()}catch(e){toast('Database error: '+e.message)}}
+async function loadAll(){try{let [a,b,c,d]=await Promise.all([sb.from('students').select('*').order('admission_no'),sb.from('payments').select('*,students(admission_no,full_name,program_type)').order('payment_date',{ascending:false}),sb.from('attendance').select('*').gte('attendance_date',ym()+'-01'),sb.from('fee_reminders').select('*').order('created_at',{ascending:false})]);for(let x of [a,b,c,d])if(x.error)throw x.error;students=a.data||[];payments=b.data||[];attendance=c.data||[];reminders=d.data||[];render();renderPayments();renderReminders();$('loadLedger').click()}catch(e){toast('Database error: '+e.message)}}
 function render(){let active=students.filter(s=>s.status==='Active');$('sStudents').textContent=active.length;$('sCollected').textContent=money(payments.reduce((n,p)=>n+Number(p.amount),0));let m=ym();$('sDue').textContent=money(active.reduce((n,s)=>{let paid=payments.filter(p=>p.student_id===s.id&&p.fee_month===m).reduce((x,p)=>x+Number(p.amount),0);return n+Math.max(0,Number(s.monthly_fee)-paid)},0));$('sAttendance').textContent=attendance.filter(a=>a.attendance_date.startsWith(m)).length;
  let q=$('studentSearch').value.toLowerCase(),pr=$('studentProgram').value,st=$('studentStatus').value;
  let list=students.filter(s=>(st==='All'||s.status===st)&&(pr==='All'||s.program_type===pr)&&[s.admission_no,s.full_name,s.parent_name,s.parent_phone].join(' ').toLowerCase().includes(q));
  $('studentRows').innerHTML=list.map(s=>`<tr><td><b>${esc(s.admission_no)}</b></td><td>${esc(s.full_name)}</td><td>${esc(s.program_type||'Tuition')}<br><span class="small muted">${esc(s.program_type==='Spoken English'?(s.english_level||'')+' '+(s.batch_timing||''):(s.class_name||''))}</span></td><td>${esc(s.parent_name||'')}<br>${esc(s.parent_phone||'')}</td><td>${money(s.monthly_fee)}</td><td><span class="pill ${s.status==='Active'?'active':'due'}">${esc(s.status)}</span></td><td><div class="actions"><button class="soft" onclick="editStudent('${s.id}')">Edit</button><button class="soft" onclick="whatsapp('${s.id}')">WhatsApp</button></div></td></tr>`).join('');
  $('payStudent').innerHTML='<option value="">Select enrolment</option>'+active.map(s=>`<option value="${s.id}">${esc(s.admission_no)} — ${esc(s.full_name)} (${esc(s.program_type||'Tuition')})</option>`).join('')}
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['students','fees','payments','attendance','reports','settings'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==b.dataset.tab));if(b.dataset.tab==='payments'){renderPayments();$('loadLedger').click()}});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['students','fees','payments','reminders','attendance','reports','settings'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==b.dataset.tab));if(b.dataset.tab==='payments'){renderPayments();$('loadLedger').click()}if(b.dataset.tab==='reminders')renderReminders()});
 $('refreshBtn').onclick=loadAll;['studentSearch','studentProgram','studentStatus'].forEach(id=>$(id).addEventListener(id==='studentSearch'?'input':'change',render));
 function formMarkup(s={}){let p=s.program_type||'Tuition';return `<div class="panel" id="studentForm"><h2>${s.id?'Edit enrolment':'New programme admission'}</h2><div class="two">
 <div><label>Programme *</label><select id="f_program"><option ${p==='Tuition'?'selected':''}>Tuition</option><option ${p==='Spoken English'?'selected':''}>Spoken English</option></select></div>
@@ -124,6 +133,21 @@ window.showReceipt=id=>{let p=payments.find(x=>x.id===id);if(!p)return;$('receip
 ['paymentProgram','paymentMonth','paymentSearch'].forEach(id=>$(id).addEventListener(id==='paymentSearch'?'input':'change',renderPayments));
 $('payMonth').value=ym();$('payDate').value=dateISO();$('paymentMonth').value=ym();$('ledgerMonth').value=ym();
 $('loadLedger').onclick=()=>{let m=$('ledgerMonth').value;$('ledgerRows').innerHTML=students.filter(s=>s.status==='Active').map(s=>{let paid=payments.filter(p=>p.student_id===s.id&&p.fee_month===m).reduce((a,p)=>a+Number(p.amount),0),bal=Math.max(0,Number(s.monthly_fee)-paid);return `<tr><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${esc(s.program_type||'Tuition')}</td><td>${money(s.monthly_fee)}</td><td>${money(paid)}</td><td>${money(bal)}</td><td><span class="pill ${bal?'due':'paid'}">${bal?'Pending':'Paid'}</span></td></tr>`}).join('')};
+$('reminderMonth').value=ym();
+function renderReminders(){
+ let m=$('reminderMonth').value||ym(),pr=$('reminderProgram').value,st=$('reminderStatus').value;
+ let rows=reminders.filter(r=>r.fee_month===m&&(pr==='All'||r.program_type===pr)&&(st==='All'||r.status===st));
+ let pending=rows.filter(r=>r.status==='Pending');
+ $('reminderPendingCount').textContent=pending.length;
+ $('reminderPendingTotal').textContent=money(pending.reduce((n,r)=>n+Number(r.balance),0));
+ $('reminderRows').innerHTML=rows.map(r=>{let student=students.find(x=>x.id===r.student_id)||{};return `<tr><td><b>${esc(student.full_name||'')}</b><br><span class="small muted">${esc(student.admission_no||'')}</span></td><td>${esc(r.program_type)}</td><td>${esc(r.parent_name||'')}<br>${esc(r.parent_phone||'')}</td><td>${money(r.monthly_fee)}</td><td>${money(r.amount_paid)}</td><td><b>${money(r.balance)}</b></td><td style="white-space:pre-wrap;min-width:260px">${esc(r.message)}</td><td><span class="pill ${r.status==='Sent'?'paid':r.status==='Pending'?'due':''}">${esc(r.status)}</span><div class="actions" style="margin-top:7px">${r.status==='Pending'?`<button class="primary" onclick="sendFeeReminder('${r.id}')">Open WhatsApp</button><button class="soft" onclick="markReminder('${r.id}','Sent')">Mark sent</button><button class="danger" onclick="markReminder('${r.id}','Dismissed')">Dismiss</button>`:''}</div></td></tr>`}).join('');
+ if(!rows.length)$('reminderRows').innerHTML='<tr><td colspan="8" class="muted">No reminders for this month and filter.</td></tr>';
+}
+window.sendFeeReminder=id=>{let r=reminders.find(x=>x.id===id);if(!r)return;openWhatsApp(r.message,r.parent_phone)};
+window.markReminder=async(id,status)=>{let update={status};if(status==='Sent')update.sent_at=new Date().toISOString();let {error}=await sb.from('fee_reminders').update(update).eq('id',id);if(error){toast('Could not update reminder: '+error.message);return}let r=reminders.find(x=>x.id===id);if(r){r.status=status;if(status==='Sent')r.sent_at=update.sent_at}renderReminders();toast(status==='Sent'?'Reminder marked as sent':'Reminder dismissed')};
+$('generateReminders').onclick=async()=>{let m=$('reminderMonth').value||ym();let {data,error}=await sb.rpc('generate_monthly_fee_reminders',{p_fee_month:m});if(error){toast('Generation failed: '+error.message);return}toast(`${Number(data||0)} new reminder(s) prepared`);await loadAll()};
+$('refreshReminders').onclick=async()=>{let {data,error}=await sb.from('fee_reminders').select('*').order('created_at',{ascending:false});if(error){toast(error.message);return}reminders=data||[];renderReminders();toast('Reminder list refreshed')};
+['reminderMonth','reminderProgram','reminderStatus'].forEach(id=>$(id).addEventListener('change',renderReminders));
 $('attDate').value=dateISO();
 $('loadAttendance').onclick=async()=>{let d=$('attDate').value,pr=$('attProgram').value;let {data,error}=await sb.from('attendance').select('*').eq('attendance_date',d);if(error){toast(error.message);return}let existing=Object.fromEntries(data.map(a=>[a.student_id,a.status]));$('attRows').innerHTML=students.filter(s=>s.status==='Active'&&(pr==='All'||(s.program_type||'Tuition')===pr)).map(s=>`<tr data-student="${s.id}"><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${esc(s.program_type||'Tuition')}</td><td><select class="attStatus"><option ${existing[s.id]==='Present'?'selected':''}>Present</option><option ${existing[s.id]==='Absent'?'selected':''}>Absent</option><option ${existing[s.id]==='Late'?'selected':''}>Late</option><option ${!existing[s.id]?'selected':''}>Not marked</option></select></td></tr>`).join('')};
 $('saveAttendance').onclick=async()=>{let d=$('attDate').value,items=[...$('attRows').querySelectorAll('tr')].map(r=>({student_id:r.dataset.student,attendance_date:d,status:r.querySelector('select').value})).filter(x=>x.status!=='Not marked');if(!items.length){toast('No attendance marked');return}let {error}=await sb.from('attendance').upsert(items,{onConflict:'student_id,attendance_date'});if(error)toast(error.message);else{toast('Attendance saved');await loadAll()}};
