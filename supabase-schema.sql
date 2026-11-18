@@ -40,7 +40,7 @@ create table if not exists public.payments (
  id uuid primary key default gen_random_uuid(),
  receipt_no text unique,
  student_id uuid not null references public.students(id) on delete restrict,
- fee_month text not null check(fee_month ~ '^\\d{4}-\\d{2}$'),
+ fee_month text not null check(fee_month ~ '^[0-9]{4}-[0-9]{2}$'),
  amount numeric(10,2) not null check(amount>0),
  payment_date date not null default current_date,
  payment_method text not null default 'Cash',
@@ -48,6 +48,7 @@ create table if not exists public.payments (
  created_at timestamptz not null default now()
 );
 create sequence if not exists public.receipt_seq;
+grant usage, select on sequence public.receipt_seq to authenticated;
 create or replace function public.set_receipt_no()
 returns trigger language plpgsql as $$
 begin

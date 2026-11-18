@@ -6,7 +6,7 @@ A lightweight Vercel-ready web app backed by Supabase.
 - Permanent student database and unique admission numbers (`EDA-YYYY-001`)
 - Parent/guardian contact details
 - Monthly fee ledger; multiple partial payments per month
-- Unique receipt numbers and printable payment receipts
+- Unique receipt numbers, printable receipts, WhatsApp text sharing and JPG receipt sharing
 - Attendance register
 - Printable student ID cards
 - WhatsApp fee-reminder link (opens WhatsApp with a prefilled message; admin sends it)
