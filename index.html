@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EduSkills Academy | Management Portal</title>
+<style>
+:root{--navy:#172554;--blue:#4057c8;--ink:#1c2638;--muted:#687386;--line:#e5e9f1;--bg:#f4f6fb;--green:#16845b;--red:#bd4545}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,Arial}
+button,input,select,textarea{font:inherit}button{border:0;border-radius:9px;padding:10px 13px;cursor:pointer;font-weight:650}.primary{background:var(--blue);color:white}.soft{background:#edf0ff;color:#3549b8}.danger{background:#fff0f0;color:#a33}.hidden{display:none!important}
+header{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:5}
+.brand{font-weight:800;font-size:18px;color:var(--navy)}.brand small{display:block;font-size:10px;letter-spacing:1.4px;color:var(--muted);font-weight:600}
+.wrap{max-width:1200px;margin:24px auto;padding:0 18px}.login{max-width:430px;margin:8vh auto;background:#fff;border:1px solid var(--line);padding:28px;border-radius:16px}
+h1{font-size:23px;margin:0 0 5px}h2{font-size:17px;margin:0 0 15px}.muted{color:var(--muted)}.small{font-size:12px}
+input,select,textarea{width:100%;padding:10px 11px;border:1px solid #d8deea;border-radius:8px;background:white;color:var(--ink)}label{display:block;color:var(--muted);font-size:12px;font-weight:650;margin:11px 0 5px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin:20px 0}.stat,.panel{background:white;border:1px solid var(--line);border-radius:13px;padding:17px}.stat span{font-size:12px;color:var(--muted)}.stat strong{display:block;font-size:25px;margin-top:4px}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0}.tabs button{background:#e9edf6;color:#42506a}.tabs button.active{background:var(--navy);color:#fff}
+.panel{margin-bottom:16px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row .fit{flex:0 0 auto}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--line);font-size:13px}th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.pill{display:inline-block;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:750}.paid{background:#e7f7ef;color:#14734e}.due{background:#fff1df;color:#935a0a}.active{background:#eaf0ff;color:#3549b8}
+.actions{display:flex;gap:5px;flex-wrap:wrap}.actions button{font-size:11px;padding:7px 9px}
+.notice{background:#fff8e8;border:1px solid #f0dfb8;border-radius:10px;padding:12px;color:#76571b;margin:12px 0}
+.toast{position:fixed;bottom:18px;right:18px;background:#18233a;color:#fff;padding:12px 16px;border-radius:10px;z-index:20;max-width:90vw}
+.receipt{max-width:620px;margin:20px auto;background:white;border:1px solid #ddd;padding:28px;color:#111}
+.idcard{width:340px;border:2px solid #172554;border-radius:12px;padding:16px;margin:10px auto;background:white;text-align:center}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}header{padding:0 14px}.wrap{padding:0 12px}}
+@media print{header,.tabs,.no-print{display:none!important}body{background:white}.wrap{margin:0;padding:0}.receipt,.idcard{border:1px solid #777;box-shadow:none}}
+</style>
+</head>
+<body>
+<header><div class="brand">EduSkills Academy<small>STUDENT & FEE MANAGEMENT</small></div><div class="row fit" style="gap:8px"><span id="userLabel" class="small muted"></span><button id="logoutBtn" class="soft hidden">Sign out</button></div></header>
+<main class="wrap">
+<section id="setup" class="login hidden">
+<h1>Connect your database</h1><p class="muted">Paste your Supabase Project URL and anon/public key. These values are safe for browser use when Row Level Security is enabled.</p>
+<label>Supabase Project URL</label><input id="sbUrl" placeholder="https://your-project.supabase.co">
+<label>Supabase anon / publishable key</label><textarea id="sbKey" rows="3" placeholder="sb_publishable_... or anon key"></textarea>
+<button class="primary" id="saveConfig" style="width:100%;margin-top:15px">Save connection</button>
+<p class="small muted">Connection details are saved in this browser only. Never paste your service_role key here.</p>
+</section>
+<section id="login" class="login hidden">
+<h1>Admin login</h1><p class="muted">Sign in to manage academy records.</p>
+<label>Email</label><input id="email" type="email" autocomplete="username">
+<label>Password</label><input id="password" type="password" autocomplete="current-password">
+<button class="primary" id="loginBtn" style="width:100%;margin-top:16px">Sign in</button>
+<p class="small muted">Create your first admin account in Supabase → Authentication → Users → Add user.</p>
+<button class="soft" id="changeConfig" style="width:100%;margin-top:8px">Change database settings</button>
+</section>
+<section id="app" class="hidden">
+<div class="row"><div><h1>Dashboard</h1><span class="muted small">Your academy at a glance</span></div><button class="soft fit" id="refreshBtn">Refresh data</button></div>
+<div class="grid">
+<div class="stat"><span>Active students</span><strong id="sStudents">0</strong></div>
+<div class="stat"><span>Fees collected (all time)</span><strong id="sCollected">₹0</strong></div>
+<div class="stat"><span>Fees due (current month)</span><strong id="sDue">₹0</strong></div>
+<div class="stat"><span>Attendance entries (this month)</span><strong id="sAttendance">0</strong></div>
+</div>
+<div class="tabs no-print">
+<button class="active" data-tab="students">Students</button><button data-tab="fees">Fees & receipts</button><button data-tab="attendance">Attendance</button><button data-tab="reports">Reports</button><button data-tab="settings">Settings & backup</button>
+</div>
+<section id="tab-students" class="panel">
+<div class="row"><h2>Student database</h2><button class="primary fit" id="newStudent">+ New admission</button></div>
+<div class="row"><input id="studentSearch" placeholder="Search admission no., student or parent…"><select id="studentStatus" style="max-width:160px"><option value="Active">Active students</option><option value="Inactive">Inactive students</option><option value="All">All students</option></select></div>
+<div class="tablewrap"><table><thead><tr><th>Admission no.</th><th>Student</th><th>Class</th><th>Parent / phone</th><th>Monthly fee</th><th>Status</th><th>Actions</th></tr></thead><tbody id="studentRows"></tbody></table></div>
+</section>
+<section id="tab-fees" class="panel hidden">
+<div class="row"><h2>Record a payment</h2><button class="soft fit" id="showPayments">Payment history</button></div>
+<div class="two">
+<div><label>Student</label><select id="payStudent"></select></div><div><label>Fee month</label><input type="month" id="payMonth"></div>
+<div><label>Amount received (₹)</label><input type="number" min="1" id="payAmount"></div><div><label>Payment date</label><input type="date" id="payDate"></div>
+<div><label>Payment method</label><select id="payMethod"><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Other</option></select></div><div><label>Reference / notes</label><input id="payNote" placeholder="Optional transaction reference"></div>
+</div><button class="primary" id="recordPayment" style="margin-top:14px">Save payment & create receipt</button>
+<div id="receiptArea"></div>
+<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+<h2>Monthly fee ledger</h2><div class="row"><input type="month" id="ledgerMonth"><button class="soft fit" id="loadLedger">Load ledger</button></div>
+<div class="tablewrap"><table><thead><tr><th>Admission no.</th><th>Student</th><th>Fee</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody id="ledgerRows"></tbody></table></div>
+</section>
+<section id="tab-attendance" class="panel hidden">
+<h2>Daily attendance</h2><div class="row"><input type="date" id="attDate"><button class="soft fit" id="loadAttendance">Load register</button></div>
+<div class="tablewrap"><table><thead><tr><th>Admission no.</th><th>Student</th><th>Class</th><th>Attendance</th></tr></thead><tbody id="attRows"></tbody></table></div>
+<button class="primary" id="saveAttendance" style="margin-top:14px">Save attendance</button>
+</section>
+<section id="tab-reports" class="panel hidden">
+<h2>Reports</h2><div class="three"><div><label>From month</label><input type="month" id="reportFrom"></div><div><label>To month</label><input type="month" id="reportTo"></div><div style="align-self:end"><button class="primary" id="makeReport">Generate report</button></div></div>
+<div id="reportResult" class="notice">Choose a date range to generate a collection summary.</div>
+<button class="soft" id="exportStudents">Export students CSV</button> <button class="soft" id="exportPayments">Export payments CSV</button>
+</section>
+<section id="tab-settings" class="panel hidden">
+<h2>Settings & backups</h2><div class="notice">Your data lives in Supabase, not in this browser. Export backups regularly. Keep your Supabase service-role key private and never enter it in this app.</div>
+<p><b>Admission number format:</b> EDA-YYYY-001 (automatically generated by the database).</p>
+<button class="soft" id="backupBtn">Download database backup (CSV files)</button>
+<p class="small muted">For a full database backup, use Supabase Dashboard → Database → Backups. CSV export is a convenient records copy, not a full database restore point.</p>
+</section>
+</section>
+</main><div id="toast" class="toast hidden"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let sb=null,students=[],payments=[],attendance=[],editingId=null;
+const $=id=>document.getElementById(id), today=new Date(), ym=()=>today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0'), dateISO=()=>today.toISOString().slice(0,10), money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+function toast(m){$('toast').textContent=m;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),3500)}
+function cfg(){try{return JSON.parse(localStorage.getItem('eda_supabase')||'null')}catch{return null}}
+function show(which){['setup','login','app'].forEach(x=>$(x).classList.toggle('hidden',x!==which))}
+async function init(){const c=cfg();if(!c){show('setup');return}if(!window.supabase){toast('Could not load Supabase library. Check internet.');show('setup');return}sb=window.supabase.createClient(c.url,c.key);const {data:{session}}=await sb.auth.getSession();if(session){$('userLabel').textContent=session.user.email;$('logoutBtn').classList.remove('hidden');show('app');await loadAll()}else show('login')}
+$('saveConfig').onclick=()=>{let url=$('sbUrl').value.trim(),key=$('sbKey').value.trim();if(!url.startsWith('https://')||!key){toast('Enter a valid URL and public key');return}localStorage.setItem('eda_supabase',JSON.stringify({url,key}));init()};
+$('changeConfig').onclick=()=>{localStorage.removeItem('eda_supabase');show('setup')};
+$('loginBtn').onclick=async()=>{let {error}=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});if(error)toast(error.message);else init()};
+$('logoutBtn').onclick=async()=>{await sb.auth.signOut();$('logoutBtn').classList.add('hidden');show('login')};
+async function loadAll(){try{let [a,b,c]=await Promise.all([sb.from('students').select('*').order('admission_no'),sb.from('payments').select('*').order('payment_date',{ascending:false}),sb.from('attendance').select('*').gte('attendance_date',ym()+'-01')]);if(a.error)throw a.error;if(b.error)throw b.error;if(c.error)throw c.error;students=a.data;payments=b.data;attendance=c.data;render()}catch(e){toast('Database error: '+e.message)}}
+function render(){let active=students.filter(s=>s.status==='Active');$('sStudents').textContent=active.length;$('sCollected').textContent=money(payments.reduce((n,p)=>n+Number(p.amount),0));let month=ym();let due=active.reduce((n,s)=>{let paid=payments.filter(p=>p.student_id===s.id&&p.fee_month===month).reduce((x,p)=>x+Number(p.amount),0);return n+Math.max(0,Number(s.monthly_fee)-paid)},0);$('sDue').textContent=money(due);$('sAttendance').textContent=attendance.filter(a=>a.attendance_date.startsWith(month)).length;
+let q=$('studentSearch').value.toLowerCase(),st=$('studentStatus').value;let list=students.filter(s=>(st==='All'||s.status===st)&&[s.admission_no,s.full_name,s.parent_name,s.parent_phone].join(' ').toLowerCase().includes(q));
+$('studentRows').innerHTML=list.map(s=>`<tr><td><b>${esc(s.admission_no)}</b></td><td>${esc(s.full_name)}</td><td>${esc(s.class_name||'')}</td><td>${esc(s.parent_name||'')}<br>${esc(s.parent_phone||'')}</td><td>${money(s.monthly_fee)}</td><td><span class="pill ${s.status==='Active'?'active':'due'}">${s.status}</span></td><td><div class="actions"><button class="soft" onclick="editStudent('${s.id}')">Edit</button><button class="soft" onclick="idCard('${s.id}')">ID card</button><button class="soft" onclick="whatsapp('${s.id}')">WhatsApp</button></div></td></tr>`).join('');
+$('payStudent').innerHTML='<option value="">Select student</option>'+active.map(s=>`<option value="${s.id}">${esc(s.admission_no)} — ${esc(s.full_name)}</option>`).join('');
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['students','fees','attendance','reports','settings'].forEach(x=>$('tab-'+x).classList.toggle('hidden',x!==b.dataset.tab))});
+$('refreshBtn').onclick=loadAll;$('studentSearch').oninput=render;$('studentStatus').onchange=render;
+function formMarkup(s={}){return `<div class="panel" id="studentForm"><h2>${s.id?'Edit student':'New admission'}</h2><div class="two">
+<div><label>Full name *</label><input id="f_name" value="${esc(s.full_name||'')}"></div><div><label>Date of birth</label><input id="f_dob" type="date" value="${s.date_of_birth||''}"></div>
+<div><label>Parent / guardian name</label><input id="f_parent" value="${esc(s.parent_name||'')}"></div><div><label>Parent mobile</label><input id="f_phone" value="${esc(s.parent_phone||'')}"></div>
+<div><label>Class / grade</label><input id="f_class" value="${esc(s.class_name||'')}"></div><div><label>School</label><input id="f_school" value="${esc(s.school_name||'')}"></div>
+<div><label>Subjects</label><input id="f_subjects" value="${esc(s.subjects||'')}" placeholder="Maths, Science…"></div><div><label>Monthly fee (₹)</label><input id="f_fee" type="number" min="0" value="${s.monthly_fee??''}"></div>
+<div><label>Admission date</label><input id="f_admission" type="date" value="${s.admission_date||dateISO()}"></div><div><label>Status</label><select id="f_status"><option ${s.status==='Active'?'selected':''}>Active</option><option ${s.status==='Inactive'?'selected':''}>Inactive</option></select></div>
+<div style="grid-column:1/-1"><label>Address</label><textarea id="f_address">${esc(s.address||'')}</textarea></div></div>
+<button class="primary" id="saveStudent" style="margin-top:14px">Save student</button> <button class="soft" id="closeForm">Cancel</button></div>`}
+$('newStudent').onclick=()=>{editingId=null;let old=$('studentForm');if(old)old.remove();$('tab-students').insertAdjacentHTML('afterbegin',formMarkup());wireStudentForm()};
+window.editStudent=id=>{let s=students.find(x=>x.id===id);if(!s)return;editingId=id;let old=$('studentForm');if(old)old.remove();$('tab-students').insertAdjacentHTML('afterbegin',formMarkup(s));wireStudentForm()};
+function wireStudentForm(){$('closeForm').onclick=()=>$('studentForm').remove();$('saveStudent').onclick=async()=>{let name=$('f_name').value.trim();if(!name){toast('Student name is required');return}let obj={full_name:name,date_of_birth:$('f_dob').value||null,parent_name:$('f_parent').value,parent_phone:$('f_phone').value,class_name:$('f_class').value,school_name:$('f_school').value,subjects:$('f_subjects').value,monthly_fee:Number($('f_fee').value||0),admission_date:$('f_admission').value,status:$('f_status').value,address:$('f_address').value};let res=editingId?await sb.from('students').update(obj).eq('id',editingId):await sb.from('students').insert(obj);if(res.error){toast(res.error.message);return}toast('Student record saved');$('studentForm').remove();await loadAll()}}
+$('recordPayment').onclick=async()=>{let student=$('payStudent').value,amount=Number($('payAmount').value);if(!student||!amount||amount<=0||!$('payMonth').value){toast('Select student, month and a valid amount');return}let {data,error}=await sb.from('payments').insert({student_id:student,fee_month:$('payMonth').value,amount,payment_date:$('payDate').value||dateISO(),payment_method:$('payMethod').value,notes:$('payNote').value}).select('*,students(admission_no,full_name)').single();if(error){toast(error.message);return}payments.unshift(data);render();$('receiptArea').innerHTML=receiptHTML(data);toast('Payment saved. Receipt generated.');$('payAmount').value='';$('payNote').value=''};
+function receiptHTML(p){let s=p.students||students.find(x=>x.id===p.student_id)||{};return `<div class="receipt" id="receipt"><h2 style="text-align:center">EduSkills Academy</h2><p style="text-align:center">PAYMENT RECEIPT</p><hr><p><b>Receipt:</b> ${esc(p.receipt_no||p.id)}<br><b>Date:</b> ${p.payment_date}<br><b>Admission No:</b> ${esc(s.admission_no||'')}<br><b>Student:</b> ${esc(s.full_name||'')}<br><b>Fee month:</b> ${p.fee_month}<br><b>Amount received:</b> ${money(p.amount)}<br><b>Method:</b> ${esc(p.payment_method)}</p><hr><p>Thank you for your payment.</p><button class="primary no-print" onclick="window.print()">Print receipt</button></div>`}
+$('showPayments').onclick=()=>{$('receiptArea').innerHTML='<h2>Recent payment transactions</h2><div class="tablewrap"><table><thead><tr><th>Receipt</th><th>Student</th><th>Month</th><th>Date</th><th>Amount</th><th>Action</th></tr></thead><tbody>'+payments.map(p=>{let s=students.find(x=>x.id===p.student_id)||{};return `<tr><td>${esc(p.receipt_no||'')}</td><td>${esc(s.full_name||'')}</td><td>${p.fee_month}</td><td>${p.payment_date}</td><td>${money(p.amount)}</td><td><button class="soft" onclick="printReceipt('${p.id}')">Receipt</button></td></tr>`}).join('')+'</tbody></table></div>'};
+window.printReceipt=id=>{let p=payments.find(x=>x.id===id);if(!p)return;let s=students.find(x=>x.id===p.student_id)||{};$('receiptArea').innerHTML=receiptHTML({...p,students:s});window.print()};
+$('payMonth').value=ym();$('payDate').value=dateISO();$('ledgerMonth').value=ym();
+$('loadLedger').onclick=()=>{let m=$('ledgerMonth').value;$('ledgerRows').innerHTML=students.filter(s=>s.status==='Active').map(s=>{let paid=payments.filter(p=>p.student_id===s.id&&p.fee_month===m).reduce((a,p)=>a+Number(p.amount),0),bal=Math.max(0,Number(s.monthly_fee)-paid);return `<tr><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${money(s.monthly_fee)}</td><td>${money(paid)}</td><td>${money(bal)}</td><td><span class="pill ${bal?'due':'paid'}">${bal?'Pending':'Paid'}</span></td></tr>`}).join('')};
+$('attDate').value=dateISO();
+$('loadAttendance').onclick=async()=>{let d=$('attDate').value;let {data,error}=await sb.from('attendance').select('*').eq('attendance_date',d);if(error){toast(error.message);return}let existing=Object.fromEntries(data.map(a=>[a.student_id,a.status]));$('attRows').innerHTML=students.filter(s=>s.status==='Active').map(s=>`<tr data-student="${s.id}"><td>${esc(s.admission_no)}</td><td>${esc(s.full_name)}</td><td>${esc(s.class_name||'')}</td><td><select class="attStatus"><option ${existing[s.id]==='Present'?'selected':''}>Present</option><option ${existing[s.id]==='Absent'?'selected':''}>Absent</option><option ${existing[s.id]==='Late'?'selected':''}>Late</option><option ${!existing[s.id]?'selected':''}>Not marked</option></select></td></tr>`).join('')};
+$('saveAttendance').onclick=async()=>{let d=$('attDate').value,items=[...$('attRows').querySelectorAll('tr')].map(r=>({student_id:r.dataset.student,attendance_date:d,status:r.querySelector('select').value})).filter(x=>x.status!=='Not marked');if(!items.length){toast('No attendance marked');return}let {error}=await sb.from('attendance').upsert(items,{onConflict:'student_id,attendance_date'});if(error)toast(error.message);else{toast('Attendance saved');await loadAll()}};
+window.idCard=id=>{let s=students.find(x=>x.id===id);$('receiptArea').innerHTML=`<div class="idcard" id="idcard"><h2>EduSkills Academy</h2><div style="font-size:11px;letter-spacing:1px">STUDENT ID CARD</div><hr><h3>${esc(s.full_name)}</h3><b>${esc(s.admission_no)}</b><p>Class: ${esc(s.class_name||'')}<br>Parent: ${esc(s.parent_name||'')}<br>Phone: ${esc(s.parent_phone||'')}</p></div><div class="no-print" style="text-align:center"><button class="primary" onclick="window.print()">Print ID card</button></div>`};
+window.whatsapp=id=>{let s=students.find(x=>x.id===id);if(!s.parent_phone){toast('No parent phone number saved');return}let m=ym(),paid=payments.filter(p=>p.student_id===id&&p.fee_month===m).reduce((a,p)=>a+Number(p.amount),0),due=Math.max(0,Number(s.monthly_fee)-paid),msg=`Hello ${s.parent_name||'Parent'}, this is a fee reminder from EduSkills Academy for ${s.full_name} (${s.admission_no}). Monthly fee for ${m}: ${money(s.monthly_fee)}. Paid: ${money(paid)}. Balance: ${money(due)}. Thank you.`;window.open('https://wa.me/'+s.parent_phone.replace(/\D/g,'')+'?text='+encodeURIComponent(msg),'_blank')};
+$('makeReport').onclick=()=>{let f=$('reportFrom').value,t=$('reportTo').value;if(!f||!t||f>t){toast('Choose a valid month range');return}let ps=payments.filter(p=>p.fee_month>=f&&p.fee_month<=t),total=ps.reduce((a,p)=>a+Number(p.amount),0);$('reportResult').textContent=`${ps.length} payment transactions | Total collected: ${money(total)} | Period: ${f} to ${t}`};
+function csvDownload(name,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('exportStudents').onclick=()=>csvDownload('eduskills-students.csv',[Object.keys(students[0]||{admission_no:'',full_name:''}),...students.map(s=>Object.values(s))]);
+$('exportPayments').onclick=()=>csvDownload('eduskills-payments.csv',[Object.keys(payments[0]||{receipt_no:'',amount:''}),...payments.map(p=>Object.values(p))]);
+$('backupBtn').onclick=()=>{csvDownload('eduskills-students-backup.csv',[Object.keys(students[0]||{admission_no:'',full_name:''}),...students.map(s=>Object.values(s))]);csvDownload('eduskills-payments-backup.csv',[Object.keys(payments[0]||{receipt_no:'',amount:''}),...payments.map(p=>Object.values(p))]);toast('CSV backup downloads started')};
+init();
+</script>
+</body></html>
